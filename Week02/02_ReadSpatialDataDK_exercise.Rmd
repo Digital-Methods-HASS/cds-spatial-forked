@@ -50,28 +50,62 @@ In this exercise you will read in three shapefiles (parks, playgrounds, and fore
 
 ```{r load, eval=FALSE, echo=TRUE}
 # Load the sf package
-___(___)
+install.packages("sf")
+library(sf)
+
 
 # Read in the forests shapefile
-forests <- ___("../data/forests.shp")
+forests <-st_read("../data/forests.shp")
 
 # Read in the parks shapefile
-parks <- ___(___)
+parks <- st_read("../data/parks.shp")
 
 # Read in the playgrounds shapefile
-playgrounds <- ___(___)
+playgrounds <- st_read("../data/playgrounds4326.shp")
 
 # Read in the shelters json
-shelters <- ___(___)
-
+shelters <- st_read("../data/shelters.json")
+st_read
 # View the first few features of all layers
-___(___)
+head(forests)
+head(parks)
+head(playgrounds)
+head(shelters)
+
 ```
 
 ## Questions: 
 
-1. How many features does each layer contain and what kind of geometry are they?
+1. How many features (shapes *polygon, point, line*) does each layer (*each dataset is a layer*) contain and what kind of geometry are they? == How many observations in each dataobject (data object is a collection of one or more data points that create meaning as a whole) ---> soo how many rows? 
+**Forests** 
+layers: 32, since there are 32 rows?
+geometry: polygons (MULTIPOLYGON)
+
+**Parks**
+layers:47
+geometry: polygons (MULTIPOLYGON)
+
+**shelters**
+layers: 19
+geometry: points (POINT)
+
+**playgrounds**
+layers: 51
+geometry: points (POINT)
+
+
 2. What is the CRS value in these objects?
+```{r}
+st_crs(forests)
+st_crs(parks)
+#the playgrounds does not work? -> there are no CRS, person who send it didn't attach that...
+st_crs(playgrounds)
+#define the crs to the same ESPG as in the other files!
+st_crs(playgrounds) <- 25832
+#run the st_crs(playgrounds) again, and it will work! 
+st_crs(shelters)
+
+```
 
 
 Well done, now you should see how easy it can be to read in shapefiles and you got your first taste of what an sf object looks like.
@@ -93,22 +127,32 @@ Spatial objects in `sf` are just data frames with some special properties. This 
 
 ```{r wrangle-parks, eval=FALSE, echo=TRUE}
 # Load the sf package
-___
+library(sf)
 
 # ... and the dplyr package
-___
+library(tidyverse)
 
 # Use filter() to limit to over5ha parks
-___
+#1 ha = 10000m2
+
+parks5ha <- filter(parks, areal_m2 > 5000)
+#but this is problematic! you cannot be sure that people type in the right information, extract the data from the polygons instead
+parks$areaofgeom <- st_area(parks)
+
+over5lim <- parks %>% filter(unclass(areaofgeom) > 5000)
 
 # Count the number of rows
-___(over5ha)
+nrow(parks)
+#rows = 45
+
 
 # Limit to navn and areal_m2 variables
-over5_lim <- over5ha %>% ___(navn, areal_m2) 
+over5_lim <- parks5ha %>% select(navn, areal_m2) 
 
 # Use head() to look at the first few records
-___(over5_lim)
+head(over5_lim)
+
+# the reason why the geometry column is not deleted is due to the fact that it is ingrained in the CRS, and so to speak not really a data column, but same kind of weird format as in parks areaofgeoms but same kind of  but a data column attached to the projected CRS part of the file (remember, it is not a singular file but a multiple file)
 ```
 
 Great! You can see why the `sf` package is so nice – your spatial objects are data frames that you can smoothly manipulate with `dplyr`. The number of parks over 5ha is 17
